@@ -48,10 +48,14 @@ class IOTService:
         return device_id
 
     async def unregister_device(self, device_id: str) -> None:
+        if device_id not in self.devices:
+            raise ValueError("Invalid device_id")
         await self.devices[device_id].disconnect()
         del self.devices[device_id]
 
     def get_device(self, device_id: str) -> Device:
+        if device_id not in self.devices:
+            raise ValueError("Invalid device_id")
         return self.devices[device_id]
 
     async def run_program(
@@ -73,6 +77,5 @@ class IOTService:
 
     async def send_msg(self, msg: Message) -> None:
         if msg.device_id not in self.devices:
-            print(f"Bad device id passed to IOTService.send_msg(): "
-                  f"{msg.device_id}")
+            raise ValueError("Invalid device_id")
         await self.devices[msg.device_id].send_message(msg.msg_type, msg.data)
