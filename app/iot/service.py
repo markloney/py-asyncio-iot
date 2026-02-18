@@ -1,9 +1,18 @@
 import asyncio
 import random
 import string
-from typing import Protocol
+from typing import Any, Awaitable, Protocol
 
 from .message import Message, MessageType
+
+
+async def run_sequence(*functions: Awaitable[Any]) -> None:
+    for function in functions:
+        await function
+
+
+async def run_parallel(*functions: Awaitable[Any]) -> None:
+    await asyncio.gather(*functions)
 
 
 def generate_id(length: int = 8) -> str:
@@ -45,10 +54,25 @@ class IOTService:
     def get_device(self, device_id: str) -> Device:
         return self.devices[device_id]
 
-    async def run_program(self, program: list[Message]) -> None:
+    async def run_program(
+            self,
+            program: list[Message],
+            *,
+            in_parallel: bool = False
+    ) -> None:
         print("=====RUNNING PROGRAM======")
-        await asyncio.gather(*(self.send_msg(msg) for msg in program))
+
+        awaitables = [self.send_msg(msg) for msg in program]
+
+        if in_parallel:
+            await run_parallel(*awaitables)
+        else:
+            await run_sequence(*awaitables)
+
         print("=====END OF PROGRAM======")
 
     async def send_msg(self, msg: Message) -> None:
+        if msg.device_id not in self.devices:
+            print(f"Bad device id passed to IOTService.send_msg(): "
+                  f"{msg.device_id}")
         await self.devices[msg.device_id].send_message(msg.msg_type, msg.data)
